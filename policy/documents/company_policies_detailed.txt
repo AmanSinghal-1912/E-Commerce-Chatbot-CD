@@ -1,0 +1,163 @@
+Company Policies - Detailed Version
+
+1.  General Overview
+
+-   Customer satisfaction is our top priority. These policies are
+    designed to protect both the buyer and seller, ensuring fairness and
+    transparency.
+-   Policies may differ based on product category, seller terms, and
+    local laws.
+
+2.  Return Policy
+
+-   Products can be returned within 7–30 days (depending on category).
+-   Apparel, footwear, and accessories must be unworn and in resalable
+    condition.
+-   Certain hygiene-sensitive items (cosmetics, personal care, lingerie,
+    perishables) cannot be returned.
+-   Return requests must be raised through the platform with a valid
+    reason (wrong item, damaged item, defective product, not as
+    described, etc.).
+
+3.  Refund Policy
+
+-   Refund is processed after product inspection.
+-   Refund methods: original payment source, store credit, or gift card.
+-   Timeframes:
+    -   Credit/Debit Card: 5–7 business days
+    -   Net Banking/UPI: 2–5 business days
+    -   Wallet Refund: Instant
+-   Refund exceptions: Partial refunds may apply if only part of an
+    order is returned.
+
+4.  Replacement & Exchange Policy
+
+-   Customers can choose exchange (different size, color, or variant)
+    instead of refund.
+-   Electronics replacements require brand-authorized inspection.
+-   Exchange is subject to stock availability.
+
+5.  Undelivered Orders & Delivery Issues
+
+-   If undelivered due to courier error, customer gets full refund or
+    free re-delivery.
+-   If undelivered due to incorrect address/phone details provided by
+    customer, shipping charges may not be refunded.
+-   Failed deliveries after 3 attempts may result in return-to-origin
+    (RTO).
+
+6.  Order Cancellation Policy
+
+-   Cancellation is allowed before product is shipped.
+-   Once shipped, cancellation may not be possible. Customer can return
+    after delivery.
+-   Prepaid orders refunded instantly on cancellation before shipping.
+
+7.  Defective/Damaged Products
+
+-   Must be reported within 48 hours with photos/videos.
+-   Depending on severity: refund, replacement, or repair offered.
+-   Some products (like mobile phones) require DOA (Dead On Arrival)
+    certification from brand service center.
+
+8.  Warranty Policy
+
+-   Manufacturer warranty applies to eligible products (electronics,
+    appliances, etc.).
+-   Extended warranty and protection plans may be available for
+    purchase.
+-   Warranty claims must follow manufacturer terms.
+
+9.  Shipping & Delivery
+
+-   Standard, express, and same-day delivery options may be available.
+-   Tracking information provided after dispatch.
+-   Delays due to natural disasters, strikes, or government restrictions
+    are exempt from liability.
+
+10. Payment & Financing
+
+-   Accepted methods: Credit/Debit Cards, UPI, Wallets, Net Banking,
+    Cash on Delivery (COD).
+-   EMI and Pay Later options may be available for high-value products.
+-   COD orders may have limits or require partial advance payment.
+
+11. Fraudulent Claims & Policy Misuse
+
+-   Repeated returns of used products may lead to account suspension.
+-   Fraudulent refund claims will be investigated and reported to
+    authorities if necessary.
+
+12. International Shipping Policy
+
+-   Customs duties, taxes, and clearance fees must be borne by the
+    customer.
+-   Delivery timelines may vary based on country regulations.
+-   Some products may not be eligible for international delivery.
+
+13. Privacy & Data Protection
+
+-   Customer data is protected and used only for fulfilling orders and
+    service improvements.
+-   We do not share customer data with third parties without consent.
+-   Customers can request account deletion and data erasure.
+
+14. Bulk Orders & B2B Sales
+
+-   Special pricing and discounts available for bulk purchases.
+-   Returns on bulk/B2B orders may have stricter conditions.
+
+15. Loyalty, Rewards & Gift Cards
+
+-   Customers may earn reward points or cashback on purchases.
+-   Gift cards are non-refundable and valid only for a specified period.
+
+16. Dispute Resolution & Legal Policy
+
+-   Any disputes will be resolved under the jurisdiction of the courts
+    in the company’s registered location.
+-   Customers are encouraged to resolve issues through customer support
+    before escalating legally.
+
+17. Customer Support Policy
+
+-   Available via phone, email, and chat.
+-   Escalation matrix: Tier 1 → Tier 2 → Nodal Officer.
+-   Response time: 24–48 hours for most queries.
+payment policy.txt -
+## E-COMMERCE PAYMENT AND TERMS OF SALE
+
+**Accepted Payment Methods:** We accept Visa, MasterCard, American Express, PayPal, and Apple Pay. We do not accept personal checks or cash on delivery (COD).
+
+**Sales Tax:** Sales tax is charged according to the shipping address's jurisdiction and will be clearly itemized at checkout.
+
+**Order Confirmation:** An order confirmation email will be sent immediately after a successful payment. This confirms the order but is not a contract for fulfillment until the item is shipped.
+
+**Pricing Errors:** In the event of a significant pricing error on the website, we reserve the right to cancel the order and issue a full refund, even after an order confirmation has been sent. We will notify the customer immediately if this occurs.
+
+return_policy.txt - 
+## E-COMMERCE RETURN AND REFUND POLICY
+
+**Return Window:** We offer a 30-day return window from the date of delivery. All items must be returned within this period.
+
+**Condition of Items:** Products must be returned unused, unwashed, and in their original packaging with all tags attached. Items returned in used or damaged condition will be subject to a 20% restocking fee, or the return may be rejected.
+
+**Non-Returnable Items:** Final Sale items, gift cards, personalized products, and health/hygiene items (e.g., opened cosmetics) are not eligible for return or exchange.
+
+**Refund Method:** Refunds are processed back to the original method of payment within 5-7 business days after the returned item is received and inspected at our warehouse.
+
+**Return Shipping:** The customer is responsible for return shipping costs unless the item arrived damaged, defective, or the incorrect item was shipped.
+
+shipping_policy.txt - 
+## E-COMMERCE SHIPPING & DELIVERY POLICY
+
+**Processing Time:** All orders are processed and shipped within 1-2 business days (Monday to Friday). Orders placed after 2 PM EST will be processed the following business day.
+
+**Domestic Shipping Options (USA):**
+1. Standard Ground: 5-7 business days. $5.99 flat rate.
+2. Expedited: 2-3 business days. $15.00 flat rate.
+3. **Free Shipping:** Available for all orders over $75 USD (Standard Ground only).
+
+**International Shipping:** We currently ship to Canada, the UK, and Australia. Shipping times and costs are calculated at checkout and typically take 10-20 business days. **Customs, duties, and taxes are the responsibility of the customer.**
+
+**Lost/Damaged Packages:** If a package is lost in transit or arrives damaged, please contact us immediately with your Order ID. We will initiate a claim with the carrier and send a replacement or issue a full refund.
