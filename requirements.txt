@@ -1,0 +1,27 @@
+# Core dependencies
+python-dotenv==1.0.0
+langchain==0.1.7
+langchain-core==0.1.17
+langchain-groq==0.0.1
+
+# Vector database and embeddings
+langchain-chroma==0.0.2
+chromadb==0.4.22
+langchain-huggingface==0.0.2
+sentence-transformers==2.2.2
+
+# Database connectivity
+supabase==2.3.1
+httpx==0.25.2
+
+# Prompt handling and text processing
+langchain-text-splitters==0.0.1
+pydantic==2.5.3
+
+# Optional: for notebook support
+jupyter==1.0.0
+ipykernel==6.26.0
+
+# Development tools
+pytest==7.4.3
+black==23.11.0
