@@ -17,7 +17,7 @@ def test_product_by_id():
 
 def test_cross_table_query():
     # Use a simpler cross-table query
-    query = "Who purchased product with id 28? can u give all the details related to those users."
+    query = "how many transactions has garcia charlotte made?"
     print(f"\nQuery: {query}")
     response = db_agent(query)
     print("\nAgent Response:")

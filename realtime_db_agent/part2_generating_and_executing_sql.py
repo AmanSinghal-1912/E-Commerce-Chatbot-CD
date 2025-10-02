@@ -6,6 +6,8 @@ from dotenv import load_dotenv
 from realtime_db_agent.part1_schema_retreival import get_table_schema
 import json
 import re
+import logging
+
 load_dotenv()
 
 # Load table configuration from environment
@@ -15,6 +17,13 @@ AVAILABLE_TABLES = os.getenv("DB_TABLES").split(",")
 client = OpenAI(
     base_url="https://api.studio.nebius.com/v1/",
     api_key=os.environ.get("NEBIUS_API_KEY")
+)
+
+# Set up logging
+logging.basicConfig(
+    filename='database_queries.log',
+    level=logging.INFO,
+    format='%(asctime)s - %(message)s'
 )
 
 def generate_supabase_query(user_question: str) -> dict:
@@ -53,7 +62,7 @@ def generate_supabase_query(user_question: str) -> dict:
     
     # Call Nebius API
     response = client.chat.completions.create(
-        model="Qwen/Qwen3-Coder-480B-A35B-Instruct",
+        model="Qwen/Qwen3-Coder-30B-A3B-Instruct",
         messages=[
             {"role": "system", "content": "You are a database query generator that outputs only valid JSON."},
             {"role": "user", "content": prompt}
@@ -78,7 +87,7 @@ def generate_supabase_query(user_question: str) -> dict:
         return {"table_name": AVAILABLE_TABLES[0], "select": "*", "filters": []}
     
 def execute_supabase_query(query_params: dict):
-    """Execute a query using Supabase Query Builder."""
+    """Execute a query using Supabase Query Builder with logging."""
     supabase: Client = create_client(
         os.getenv("SUPABASE_URL"), 
         os.getenv("SUPABASE_API")
@@ -86,6 +95,9 @@ def execute_supabase_query(query_params: dict):
     
     # Get table name from query params
     table_name = query_params.get("table_name", AVAILABLE_TABLES[0])
+    
+    # Log the query being executed
+    logging.info(f"QUERY: Table={table_name}, Params={json.dumps(query_params)}")
     
     try:
         # Start building the query with the proper table
@@ -106,7 +118,7 @@ def execute_supabase_query(query_params: dict):
             # Convert value type based on column name patterns
             if "id" in column.lower() and not isinstance(value, int):
                 try:
-                    if value.isdigit():  # If it's all numbers, convert to int
+                    if isinstance(value, str) and value.isdigit():  # If it's all numbers, convert to int
                         value = int(value)
                 except (AttributeError, ValueError):
                     pass  # Keep as is if conversion fails
@@ -127,8 +139,10 @@ def execute_supabase_query(query_params: dict):
                 query = query.like(column, f"%{value}%")
             elif operator == "ilike":
                 query = query.ilike(column, f"%{value}%")
+            elif operator == "in" and isinstance(value, list):
+                query = query.in_(column, value)
         
-        # Add ordering (with better error handling)
+        # Add ordering
         if "order" in query_params and query_params.get("order"):
             order_col = query_params["order"]
             # Don't include table name in order clause if it has a dot
@@ -148,9 +162,16 @@ def execute_supabase_query(query_params: dict):
         
         # Execute the query
         result = query.execute()
+        
+        # Log the results
+        logging.info(f"RESULT: Count={len(result.data)}, First few rows={json.dumps(result.data[:3])}")
+        
         return {"table": table_name, "data": result.data}
         
     except Exception as e:
+        # Log the error
+        logging.error(f"ERROR: {str(e)}")
+        
         # Return error info for debugging but in a structured format
         return {
             "table": table_name, 
@@ -166,7 +187,7 @@ def generate_human_response(user_question: str, query_result: dict) -> str:
     
     # Use Nebius client instead of llm
     response = client.chat.completions.create(
-        model="Qwen/Qwen3-Coder-480B-A35B-Instruct",
+        model="Qwen/Qwen3-Coder-30B-A3B-Instruct",
         messages=[
             {"role": "system", "content": "You are a helpful assistant providing database query results."},
             {"role": "user", "content": f"""
@@ -226,7 +247,7 @@ def handle_cross_table_query(user_question: str) -> str:
         
         # Get the query plan
         planning_response = client.chat.completions.create(
-            model="Qwen/Qwen3-Coder-480B-A35B-Instruct",
+            model="Qwen/Qwen3-Coder-30B-A3B-Instruct",
             messages=[
                 {"role": "system", "content": "You are a database query planner."},
                 {"role": "user", "content": planning_prompt}
@@ -266,7 +287,7 @@ def handle_cross_table_query(user_question: str) -> str:
         """
         
         primary_response = client.chat.completions.create(
-            model="Qwen/Qwen3-Coder-480B-A35B-Instruct",
+            model="Qwen/Qwen3-Coder-30B-A3B-Instruct",
             messages=[
                 {"role": "system", "content": "You generate database queries in JSON format only."},
                 {"role": "user", "content": primary_query_prompt}
@@ -306,24 +327,27 @@ def handle_cross_table_query(user_question: str) -> str:
         # Generate a comprehensive response using all collected data
         response_prompt = f"""
         The user asked: "{user_question}"
-        
+
         I have data from multiple tables:
-        
+
         {json.dumps(all_results, indent=2)}
-        
+
+        IMPORTANT: ONLY use the data provided above. Do NOT invent or hallucinate any additional transactions, users, or products.
+
         Please provide a comprehensive answer that:
         1. Combines all relevant information from the tables
         2. Presents complete user details along with their transactions
         3. Is concise and well-organized
         4. Uses appropriate formatting (bold for important details)
         5. DOES NOT ask if the user wants more information
-        6. Presents ALL available information without holding any back
-        
+        6. Presents ONLY the information in the data above
+        7. If there are more than 10 items, indicate the total count but only show the first 10
+
         Your response should be complete and not suggest further queries.
         """
         
         final_response = client.chat.completions.create(
-            model="Qwen/Qwen3-Coder-480B-A35B-Instruct",
+            model="Qwen/Qwen3-Coder-30B-A3B-Instruct",
             messages=[
                 {"role": "system", "content": "You provide complete answers by joining information from multiple database tables."},
                 {"role": "user", "content": response_prompt}

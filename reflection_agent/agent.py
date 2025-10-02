@@ -1,85 +1,125 @@
-from openai import OpenAI
+from langchain_groq import ChatGroq
 from langchain.prompts import ChatPromptTemplate
 from dotenv import load_dotenv
 import os
-import difflib
-import re
-
 load_dotenv()
 
-# Initialize Nebius client
-client = OpenAI(
-    base_url="https://api.studio.nebius.com/v1/",
-    api_key=os.environ.get("NEBIUS_API_KEY")
+# Initialize LLM
+llm = ChatGroq(
+    api_key=os.getenv("GROQ_API_KEY"),
+    model="llama-3.3-70b-versatile",
+    temperature=0.4  # Balanced for natural conversation
 )
 
-def reflection_agent(db_output: str, policy_output: str, max_iterations: int = 2):
+def reflection_agent(db_output: str = "", policy_output: str = "", previous_context: str = "", user_query: str = "", max_iterations: int = 2):
     """
-    Combines DB + Policy outputs into a user-friendly final response.
-    Handles deduplication automatically.
+    Synthesizes responses from DB and Policy agents into natural, conversational responses.
+    Handles context awareness and general conversation naturally.
     """
-    if not db_output and not policy_output:
-        return "Hello! I can help with product information and company policies. What would you like to know?"
     
-    prompt = f"""
-    Combine the following information into a helpful response:
-    
-    Database information: {db_output}
-    Policy information: {policy_output}
-    
-    IMPORTANT GUIDELINES:
-    - NO REPETITION - present each fact exactly once
-    - Be concise and direct
-    - Use numbered lists for multiple similar items
-    - Maximum 150 words
-    - Bold important facts with **asterisks**
-    """
+    # Main conversation prompt
+    conversation_prompt = ChatPromptTemplate.from_template(
+        """
+        You are a friendly, helpful assistant having a natural conversation with a customer. 
 
-    response = client.chat.completions.create(
-        model="Qwen/Qwen3-Coder-480B-A35B-Instruct",
-        messages=[
-            {"role": "system", "content": "You are a helpful assistant that provides clear, concise responses without repetition."},
-            {"role": "user", "content": prompt}
-        ],
-        temperature=0.2
+        Current situation:
+        - User asked: "{user_query}"
+        - Previous conversation context: {previous_context}
+        - Database information available: {db_output}
+        - Policy information available: {policy_output}
+
+        Your role:
+        1. Respond naturally like a human customer service representative
+        2. If you have database info, integrate it smoothly into your response
+        3. If you have policy info, explain it in a conversational way
+        4. If you have both, blend them naturally - don't treat them as separate sections
+        5. If you have neither but the user is asking something general, respond helpfully
+        6. Maintain conversation flow - reference previous context when relevant
+        7. Keep responses conversational length (2-4 sentences typically)
+        8. Be warm and professional, not robotic
+
+        Response guidelines:
+        - Don't start with "Based on..." or "According to..."  
+        - Don't list information in bullet points unless specifically asked
+        - Speak as if you're knowledgeable about both products and policies
+        - If combining product and policy info, do it seamlessly
+        - For general questions unrelated to products/policies, be helpful and conversational
+        - Reference previous conversation naturally when it adds value
+
+        Generate a natural, helpful response:
+        """
     )
     
-    # Extract content from response
-    response_text = response.choices[0].message.content
+    best_response = ""
     
-    # Apply deduplication
-    response_text = remove_repetition(response_text)
-    
-    return response_text
-
-def remove_repetition(text):
-    """Remove repeated sentences and paragraphs."""
-    if not text:
-        return ""
+    for iteration in range(max_iterations):
+        # Generate candidate response
+        formatted_prompt = conversation_prompt.format_messages(
+            user_query=user_query,
+            previous_context=previous_context or "No previous conversation",
+            db_output=db_output or "No specific product information available",
+            policy_output=policy_output or "No specific policy information available"
+        )
         
-    # Split into sentences
-    sentences = re.split(r'(?<=[.!?])\s+', text)
-    unique_sentences = []
-    seen_sentences = set()
-    
-    for sentence in sentences:
-        # Normalize for comparison
-        normalized = re.sub(r'\s+', ' ', sentence.lower().strip())
-        if len(normalized) < 10:  # Skip very short sentences
-            unique_sentences.append(sentence)
-            continue
-            
-        # Check if very similar to any existing sentence
-        if not any(difflib.SequenceMatcher(None, normalized, seen).ratio() > 0.7 for seen in seen_sentences):
-            seen_sentences.add(normalized)
-            unique_sentences.append(sentence)
-    
-    # Rejoin sentences
-    result = ' '.join(unique_sentences)
-    
-    # Fix any broken markdown formatting
-    result = re.sub(r'\*\*([^*]+)(?!\*\*)', r'**\1**', result)
-    
-    return result
+        candidate_response = llm.invoke(formatted_prompt).content.strip()
+        
+        # Quality check prompt
+        quality_check_prompt = f"""
+        Evaluate this customer service response for naturalness and helpfulness:
 
-__all__ = ["reflection_agent"]
+        User Query: "{user_query}"
+        Response: "{candidate_response}"
+
+        Check if the response:
+        1. Sounds conversational and human-like (not robotic or templated)
+        2. Appropriately addresses the user's question
+        3. Is the right length (not too short/brief, not too long/overwhelming)
+        4. Flows naturally from any previous context
+        5. Integrates available information smoothly
+
+        Rate this response: EXCELLENT, GOOD, or NEEDS_IMPROVEMENT
+        Only respond with one of these three ratings.
+        """
+        
+        quality_rating = llm.invoke(quality_check_prompt).content.strip().upper()
+        
+        best_response = candidate_response
+        
+        # Accept if good quality, or if we've reached max iterations
+        if "EXCELLENT" in quality_rating or "GOOD" in quality_rating or iteration == max_iterations - 1:
+            break
+    
+    # Final safety check - ensure we have a response
+    if not best_response or len(best_response.strip()) < 10:
+        fallback_prompt = f"""
+        The user asked: "{user_query}"
+        
+        Provide a brief, helpful response. If you can't answer specifically, politely explain what you can help with instead.
+        Keep it conversational and friendly.
+        """
+        best_response = llm.invoke(fallback_prompt).content.strip()
+    
+    return best_response
+
+# Context management helper
+def update_conversation_context(previous_context: str, user_query: str, agent_response: str, max_context_length: int = 800):
+    """
+    Helper function to maintain conversation context efficiently
+    """
+    new_exchange = f"User: {user_query}\nAssistant: {agent_response}\n"
+    
+    if not previous_context:
+        return new_exchange
+    
+    updated_context = previous_context + "\n" + new_exchange
+    
+    # Trim context if too long (keep most recent exchanges)
+    if len(updated_context) > max_context_length:
+        lines = updated_context.split('\n')
+        # Keep last few exchanges (each exchange is typically 2 lines)
+        recent_lines = lines[-(max_context_length//50):]  # Approximate line count
+        updated_context = '\n'.join(recent_lines)
+    
+    return updated_context
+
+__all__ = ["reflection_agent", "update_conversation_context"]
