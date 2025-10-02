@@ -194,83 +194,144 @@ def handle_cross_table_query(user_question: str) -> str:
             schema = get_table_schema(table)
             all_schemas += f"\n\n{schema}"
         
-        prompt = f"""
+        # First, identify relevant tables and plan the query approach
+        planning_prompt = f"""
         Given these database schemas:
         
         {all_schemas}
         
         The user asked: "{user_question}"
         
-        This question might require data from multiple tables. Please:
+        This question requires data from multiple tables.
         
-        1. Identify the primary table we should query first
-        2. Generate a complete Supabase query for that table
+        1. Determine which tables are needed to fully answer this query
+        2. Explain how these tables should be linked (which columns)
         
         Return a JSON object with:
-        - table_name: the primary table to query
-        - select: fields to select
-        - filters: array of filter objects (column, operator, value)
-        - no complex joins or operations
+        {{
+          "primary_table": "name of main table to query first",
+          "secondary_tables": ["other table names needed"],
+          "join_conditions": [
+            {{
+              "table1": "name of first table", 
+              "column1": "column in first table", 
+              "table2": "name of second table", 
+              "column2": "column in second table"
+            }}
+          ]
+        }}
         
         Only return the JSON without additional text.
         """
         
-        # Use Nebius client instead of llm
-        response = client.chat.completions.create(
+        # Get the query plan
+        planning_response = client.chat.completions.create(
             model="Qwen/Qwen3-Coder-480B-A35B-Instruct",
             messages=[
-                {"role": "system", "content": "You are a database query generator."},
-                {"role": "user", "content": prompt}
+                {"role": "system", "content": "You are a database query planner."},
+                {"role": "user", "content": planning_prompt}
             ],
             temperature=0.1
         )
         
-        # Parse the response to get query parameters
-        content = response.choices[0].message.content
-        if "```" in content:
-            match = re.search(r"```(?:json)?(.*?)```", content, re.DOTALL)
+        # Parse the planning response
+        planning_content = planning_response.choices[0].message.content
+        if "```" in planning_content:
+            match = re.search(r"```(?:json)?(.*?)```", planning_content, re.DOTALL)
             if match:
-                content = match.group(1).strip()
+                planning_content = match.group(1).strip()
+                
+        plan = json.loads(planning_content)
         
-        # Execute the primary query
-        query_params = json.loads(content)
-        result = execute_supabase_query(query_params)
+        # Now execute queries for each table and collect results
+        all_results = {}
         
-        # If we got results, see if we need secondary data
-        if result.get("data") and not result.get("error"):
-            # Now decide if we need additional data from other tables
-            context_prompt = f"""
-            The user asked: "{user_question}"
+        # First query the primary table
+        primary_table = plan.get("primary_table")
+        primary_query_prompt = f"""
+        Given this database schema:
+        
+        {get_table_schema(primary_table)}
+        
+        Generate a Supabase query for the table '{primary_table}' to find information relevant to: "{user_question}"
+        
+        Return only a JSON with:
+        {{
+          "table_name": "{primary_table}",
+          "select": "columns to select or *",
+          "filters": [{{column, operator, value}}],
+          "order": "column to order by (optional)",
+          "limit": number (optional)
+        }}
+        """
+        
+        primary_response = client.chat.completions.create(
+            model="Qwen/Qwen3-Coder-480B-A35B-Instruct",
+            messages=[
+                {"role": "system", "content": "You generate database queries in JSON format only."},
+                {"role": "user", "content": primary_query_prompt}
+            ],
+            temperature=0.1
+        )
+        
+        primary_query = json.loads(primary_response.choices[0].message.content.strip())
+        primary_result = execute_supabase_query(primary_query)
+        all_results[primary_table] = primary_result.get("data", [])
+        
+        # Now query each secondary table based on join conditions
+        for join in plan.get("join_conditions", []):
+            secondary_table = join.get("table2") if join.get("table1") == primary_table else join.get("table1")
+            join_column_primary = join.get("column1") if join.get("table1") == primary_table else join.get("column2")
+            join_column_secondary = join.get("column2") if join.get("table1") == primary_table else join.get("column1")
             
-            We have data from the {query_params.get("table_name")} table:
-            {json.dumps(result.get("data"), indent=2)}
+            # Get values from primary table for the join
+            join_values = [row.get(join_column_primary) for row in all_results[primary_table] if row.get(join_column_primary) is not None]
             
-            Should we query another table to complete this answer? If yes, which one and why?
-            Answer with just "no" if sufficient, otherwise specify which table and why.
-            """
-            
-            context_response = client.chat.completions.create(
-                model="Qwen/Qwen3-Coder-480B-A35B-Instruct",
-                messages=[
-                    {"role": "system", "content": "You are a database query analyzer."},
-                    {"role": "user", "content": context_prompt}
-                ],
-                temperature=0.1
-            )
-            
-            # If the LLM suggests getting more data
-            if "no" not in context_response.choices[0].message.content.lower():
-                # Generate response with explanation that we need more info
-                return generate_human_response(user_question, result) + "\n\nI could get more information from related tables if you'd like additional details."
-            else:
-                # We have all we need
-                return generate_human_response(user_question, result)
-        else:
-            # If there was an error, explain the situation
-            if result.get("error"):
-                return f"I tried to find users who bought highly-rated products, but I encountered a technical issue. Could you try asking about either products with high ratings or specific user purchase history separately?"
-            else:
-                return "I couldn't find any matching information for your query. Could you please be more specific about what you're looking for?"
+            if join_values:
+                secondary_query = {
+                    "table_name": secondary_table,
+                    "select": "*",
+                    "filters": [
+                        {
+                            "column": join_column_secondary,
+                            "operator": "in",
+                            "value": join_values
+                        }
+                    ]
+                }
+                
+                secondary_result = execute_supabase_query(secondary_query)
+                all_results[secondary_table] = secondary_result.get("data", [])
+        
+        # Generate a comprehensive response using all collected data
+        response_prompt = f"""
+        The user asked: "{user_question}"
+        
+        I have data from multiple tables:
+        
+        {json.dumps(all_results, indent=2)}
+        
+        Please provide a comprehensive answer that:
+        1. Combines all relevant information from the tables
+        2. Presents complete user details along with their transactions
+        3. Is concise and well-organized
+        4. Uses appropriate formatting (bold for important details)
+        5. DOES NOT ask if the user wants more information
+        6. Presents ALL available information without holding any back
+        
+        Your response should be complete and not suggest further queries.
+        """
+        
+        final_response = client.chat.completions.create(
+            model="Qwen/Qwen3-Coder-480B-A35B-Instruct",
+            messages=[
+                {"role": "system", "content": "You provide complete answers by joining information from multiple database tables."},
+                {"role": "user", "content": response_prompt}
+            ],
+            temperature=0.2
+        )
+        
+        return final_response.choices[0].message.content
             
     except Exception as e:
-        return f"I ran into a problem while trying to answer your question: {str(e)}. Could you try asking in a different way?"
+        return f"I ran into a problem with this multi-table query: {str(e)}. Could you try a simpler question?"
