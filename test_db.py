@@ -1,20 +1,48 @@
-import os 
-from realtime_db_agent.part2_generating_and_executing_sql import generate_supabase_query, execute_supabase_query, generate_human_response
+import os
+import sys
+# Add the project root to the path if needed
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
+from realtime_db_agent.agent import db_agent
 from dotenv import load_dotenv
 load_dotenv()
 
-# Define the user query
-user_input = "i want to know about the product whose product id is ZY36VAX0"
+def test_product_by_id():
+    # Test specific product ID query - using numeric ID
+    query = "I want to know about the product whose product id is 36"
+    print(f"\nQuery: {query}")
+    response = db_agent(query)
+    print("\nAgent Response:")
+    print(response)
 
-# Generate query parameters
-query_params = generate_supabase_query(user_input)
-# print("Generated Query Parameters:", query_params)
+def test_cross_table_query():
+    # Use a simpler cross-table query
+    query = "Who purchased product with id 28? can u give all the details related to those users."
+    print(f"\nQuery: {query}")
+    response = db_agent(query)
+    print("\nAgent Response:")
+    print(response)
 
-# Execute the query
-results = execute_supabase_query(query_params)
+def test_transaction_query():
+    # Test transaction-related query
+    query = "What are the recent transactions with a total price over $200?"
+    print(f"\nQuery: {query}")
+    response = db_agent(query)
+    print("\nAgent Response:")
+    print(response)
 
-# Generate human-friendly response
-human_response = generate_human_response(user_input, results)
+# def test_cross_table_query():
+#     # Test query that requires multiple tables
+#     query = "Which users bought products with a rating of 5?"
+#     print(f"\nQuery: {query}")
+#     response = db_agent(query)
+#     print("\nAgent Response:")
+#     print(response)
 
-print("\nHuman-Friendly Response:")
-print(human_response)
+if __name__ == "__main__":
+    print("===== Testing Database Agent =====")
+    
+    # Run the tests
+    # test_product_by_id()
+    # test_transaction_query()
+    test_cross_table_query()
