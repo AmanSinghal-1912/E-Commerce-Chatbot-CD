@@ -2,6 +2,7 @@ from langchain_groq import ChatGroq
 from langchain.prompts import ChatPromptTemplate
 from dotenv import load_dotenv
 import os
+
 load_dotenv()
 
 # Initialize LLM
@@ -11,13 +12,68 @@ llm = ChatGroq(
     temperature=0.4  # Balanced for natural conversation
 )
 
-def reflection_agent(db_output: str = "", policy_output: str = "", previous_context: str = "", user_query: str = "", max_iterations: int = 2):
+def _is_response_high_quality(response: str, user_query: str) -> bool:
+    """Fast, rule-based quality check to avoid robotic or low-effort responses."""
+    response = response.strip()
+    
+    # Too short or empty?
+    if len(response) < 15:
+        return False
+        
+    # Avoid robotic/templated phrasing
+    robotic_phrases = [
+        "based on", "according to", "here is", "i found", 
+        "the database shows", "policy states", "as per",
+        "i have retrieved", "the information shows"
+    ]
+    if any(phrase in response.lower() for phrase in robotic_phrases):
+        return False
+        
+    # Avoid generic "no info" responses that are too brief
+    if ("no specific" in response.lower() or "don't have" in response.lower()) and len(response.split()) < 20:
+        return False
+        
+    # Basic relevance check: response should attempt to address the query
+    if not response.endswith(('.', '!', '?')):
+        return False
+        
+    return True
+
+def _generate_fallback_response(user_query: str) -> str:
+    """Generate a safe fallback response when primary generation fails."""
+    fallback_prompt = f"""
+    The user asked: "{user_query}"
+    
+    Provide a brief, helpful response. If you can't answer specifically, politely explain what you can help with instead.
+    Keep it conversational and friendly. Do not mention databases or internal systems.
+    """
+    try:
+        return llm.invoke(fallback_prompt).content.strip()
+    except:
+        return "I'm sorry, I'm having trouble processing that right now. Could you rephrase your question or ask something else?"
+
+def reflection_agent(
+    db_output: str = "", 
+    policy_output: str = "", 
+    previous_context: str = "", 
+    user_query: str = "", 
+    max_iterations: int = 1  # Reduced from 2 - one high-quality pass is sufficient
+):
     """
     Synthesizes responses from DB and Policy agents into natural, conversational responses.
     Handles context awareness and general conversation naturally.
     """
     
-    # Main conversation prompt
+    # Input sanitization
+    db_output = str(db_output) if db_output else ""
+    policy_output = str(policy_output) if policy_output else ""
+    previous_context = str(previous_context) if previous_context else ""
+    user_query = str(user_query).strip() if user_query else ""
+    
+    if not user_query:
+        return "I'm here to help! Could you please ask your question?"
+    
+    # Main conversation prompt with strong anti-hallucination guardrails
     conversation_prompt = ChatPromptTemplate.from_template(
         """
         You are a friendly, helpful assistant having a natural conversation with a customer. 
@@ -37,6 +93,13 @@ def reflection_agent(db_output: str = "", policy_output: str = "", previous_cont
         6. Maintain conversation flow - reference previous context when relevant
         7. Keep responses conversational length (2-4 sentences typically)
         8. Be warm and professional, not robotic
+
+        IMPORTANT SAFETY RULES:
+        - NEVER invent product details, prices, policies, or availability not in the provided information
+        - If database info is empty or says "no data", say "I don't have that information" rather than guessing
+        - If policy info is missing, don't make up return/exchange rules or terms
+        - It's always better to say "I'm not sure" or "I don't have that information" than to be confidently wrong
+        - Do not mention internal systems, databases, or technical processes
 
         Response guidelines:
         - Don't start with "Based on..." or "According to..."  
@@ -61,65 +124,52 @@ def reflection_agent(db_output: str = "", policy_output: str = "", previous_cont
             policy_output=policy_output or "No specific policy information available"
         )
         
-        candidate_response = llm.invoke(formatted_prompt).content.strip()
-        
-        # Quality check prompt
-        quality_check_prompt = f"""
-        Evaluate this customer service response for naturalness and helpfulness:
-
-        User Query: "{user_query}"
-        Response: "{candidate_response}"
-
-        Check if the response:
-        1. Sounds conversational and human-like (not robotic or templated)
-        2. Appropriately addresses the user's question
-        3. Is the right length (not too short/brief, not too long/overwhelming)
-        4. Flows naturally from any previous context
-        5. Integrates available information smoothly
-
-        Rate this response: EXCELLENT, GOOD, or NEEDS_IMPROVEMENT
-        Only respond with one of these three ratings.
-        """
-        
-        quality_rating = llm.invoke(quality_check_prompt).content.strip().upper()
+        try:
+            candidate_response = llm.invoke(formatted_prompt).content.strip()
+        except Exception as e:
+            return _generate_fallback_response(user_query)
         
         best_response = candidate_response
         
-        # Accept if good quality, or if we've reached max iterations
-        if "EXCELLENT" in quality_rating or "GOOD" in quality_rating or iteration == max_iterations - 1:
+        # Use rule-based quality check instead of LLM evaluation
+        if _is_response_high_quality(candidate_response, user_query):
             break
     
-    # Final safety check - ensure we have a response
+    # Final safety check - ensure we have a valid response
     if not best_response or len(best_response.strip()) < 10:
-        fallback_prompt = f"""
-        The user asked: "{user_query}"
-        
-        Provide a brief, helpful response. If you can't answer specifically, politely explain what you can help with instead.
-        Keep it conversational and friendly.
-        """
-        best_response = llm.invoke(fallback_prompt).content.strip()
+        best_response = _generate_fallback_response(user_query)
     
     return best_response
 
-# Context management helper
-def update_conversation_context(previous_context: str, user_query: str, agent_response: str, max_context_length: int = 800):
+def update_conversation_context(
+    previous_context: str, 
+    user_query: str, 
+    agent_response: str, 
+    max_tokens: int = 300
+):
     """
-    Helper function to maintain conversation context efficiently
+    Helper function to maintain conversation context efficiently.
+    Uses rough token estimation (1 token ≈ 4 characters) to manage length.
     """
     new_exchange = f"User: {user_query}\nAssistant: {agent_response}\n"
     
     if not previous_context:
-        return new_exchange
-    
-    updated_context = previous_context + "\n" + new_exchange
+        updated_context = new_exchange
+    else:
+        updated_context = previous_context.strip() + "\n" + new_exchange
     
     # Trim context if too long (keep most recent exchanges)
-    if len(updated_context) > max_context_length:
+    # Rough estimate: 1 token ≈ 4 characters for English text
+    max_chars = max_tokens * 4
+    while len(updated_context) > max_chars and "\n" in updated_context:
         lines = updated_context.split('\n')
-        # Keep last few exchanges (each exchange is typically 2 lines)
-        recent_lines = lines[-(max_context_length//50):]  # Approximate line count
-        updated_context = '\n'.join(recent_lines)
+        if len(lines) > 2:
+            # Remove the oldest exchange (first 2 lines: User + Assistant)
+            updated_context = '\n'.join(lines[2:])
+        else:
+            # Keep at least the most recent exchange
+            break
     
-    return updated_context
+    return updated_context.strip()
 
 __all__ = ["reflection_agent", "update_conversation_context"]
