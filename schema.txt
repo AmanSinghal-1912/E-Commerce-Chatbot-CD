@@ -1,0 +1,173 @@
+(venv) zeal@zeal:~/Desktop/cd$ cd new
+(venv) zeal@zeal:~/Desktop/cd/new$ python schema_extractor.py
+Processing table: products
+Processing table: users
+Processing table: transactions
+
+Schema extracted successfully to schema_dump.json
+
+============================================================
+TERMINAL SUMMARY
+============================================================
+
+📊 TABLE: products (120 rows)
+----------------------------------------
+Columns:
+  • product_id (integer)
+  • product_name (character varying)
+  • listing_price (numeric)
+  • sale_price (numeric)
+  • discount (numeric)
+  • brand (character varying)
+  • description (text)
+  • rating (numeric)
+  • reviews (integer)
+
+Sample Data (first 5 rows):
+  {
+    "product_id": 1,
+    "product_name": "Wireless Noise-Cancelling Headphones",
+    "listing_price": 299.99,
+    "sale_price": 249.99,
+    "discount": 16.67,
+    "brand": "AcoustiX",
+    "description": "Experience immersive audio with these comfortable, over-ear headphones. Features include active noise cancellation and a 30-hour battery life.",
+    "rating": 4.5,
+    "reviews": 1245
+}
+  {
+    "product_id": 2,
+    "product_name": "Smartwatch with GPS",
+    "listing_price": 199.5,
+    "sale_price": 179.99,
+    "discount": 9.78,
+    "brand": "TechPulse",
+    "description": "Stay connected and track your fitness goals. This smartwatch includes a heart rate monitor, GPS, and a durable, waterproof design.",
+    "rating": 4.2,
+    "reviews": 850
+}
+  {
+    "product_id": 3,
+    "product_name": "Portable Bluetooth Speaker",
+    "listing_price": 89.0,
+    "sale_price": 75.0,
+    "discount": 15.73,
+    "brand": "SoundWave",
+    "description": "A compact and powerful speaker perfect for outdoor adventures. It offers crystal-clear sound and up to 12 hours of playtime.",
+    "rating": 4.7,
+    "reviews": 2100
+}
+  {
+    "product_id": 4,
+    "product_name": "Ergonomic Office Chair",
+    "listing_price": 350.0,
+    "sale_price": 299.99,
+    "discount": 14.29,
+    "brand": "ErgoFit",
+    "description": "Designed for maximum comfort and support during long workdays. Features adjustable lumbar support and a breathable mesh back.",
+    "rating": 4.8,
+    "reviews": 560
+}
+  {
+    "product_id": 5,
+    "product_name": "4K Ultra HD Smart TV",
+    "listing_price": 899.99,
+    "sale_price": 799.0,
+    "discount": 11.22,
+    "brand": "VisionMax",
+    "description": "Bring your entertainment to life with stunning 4K resolution. This smart TV comes with built-in streaming apps and multiple HDMI ports.",
+    "rating": 4.6,
+    "reviews": 985
+}
+
+📊 TABLE: users (20 rows)
+----------------------------------------
+Columns:
+  • user_id (integer)
+  • first_name (text)
+  • last_name (text)
+  • email (text)
+
+Sample Data (first 5 rows):
+  {
+    "user_id": 1,
+    "first_name": "Liam",
+    "last_name": "Smith",
+    "email": "liam.smith@example.com"
+}
+  {
+    "user_id": 2,
+    "first_name": "Olivia",
+    "last_name": "Johnson",
+    "email": "olivia.johnson@example.com"
+}
+  {
+    "user_id": 3,
+    "first_name": "Noah",
+    "last_name": "Williams",
+    "email": "noah.williams@example.com"
+}
+  {
+    "user_id": 4,
+    "first_name": "Emma",
+    "last_name": "Brown",
+    "email": "emma.brown@example.com"
+}
+  {
+    "user_id": 5,
+    "first_name": "Oliver",
+    "last_name": "Jones",
+    "email": "oliver.jones@example.com"
+}
+
+📊 TABLE: transactions (120 rows)
+----------------------------------------
+Columns:
+  • transaction_id (integer)
+  • user_id (integer)
+  • product_id (integer)
+  • quantity (integer)
+  • purchase_date (timestamp without time zone)
+  • total_price (numeric)
+
+Sample Data (first 5 rows):
+  {
+    "transaction_id": 1,
+    "user_id": 1,
+    "product_id": 1,
+    "quantity": 1,
+    "purchase_date": "2025-10-01T10:30:00",
+    "total_price": 249.99
+}
+  {
+    "transaction_id": 2,
+    "user_id": 2,
+    "product_id": 36,
+    "quantity": 1,
+    "purchase_date": "2025-10-01T11:15:00",
+    "total_price": 99.0
+}
+  {
+    "transaction_id": 3,
+    "user_id": 3,
+    "product_id": 5,
+    "quantity": 1,
+    "purchase_date": "2025-10-01T12:45:00",
+    "total_price": 799.0
+}
+  {
+    "transaction_id": 4,
+    "user_id": 4,
+    "product_id": 12,
+    "quantity": 1,
+    "purchase_date": "2025-10-01T13:00:00",
+    "total_price": 200.0
+}
+  {
+    "transaction_id": 5,
+    "user_id": 5,
+    "product_id": 7,
+    "quantity": 2,
+    "purchase_date": "2025-10-01T14:20:00",
+    "total_price": 79.98
+}

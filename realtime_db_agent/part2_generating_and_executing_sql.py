@@ -3,7 +3,7 @@ from langchain_core.messages import HumanMessage
 from supabase import create_client, Client
 import os
 from dotenv import load_dotenv
-from realtime_db_agent.part1_schema_retreival import get_table_schema
+from realtime_db_agent.part1_schema_retreival import get_table_schema,get_all_schemas,get_table_relationships,get_relationship_map
 import json
 import re
 import logging
@@ -69,7 +69,7 @@ def generate_supabase_query(user_question: str) -> dict:
         ],
         temperature=0.1
     )
-    
+
     # Extract content from response
     content = response.choices[0].message.content
     
@@ -206,156 +206,145 @@ Keep your response conversational and friendly.
     
     return response.choices[0].message.content
 
+def generate_supabase_query_for_table(user_question: str, table_name: str) -> dict:
+    """Generate query params for a specific table."""
+    schema = get_table_schema(table_name, sample_rows=2)
+    prompt = f"""
+    Schema for table '{table_name}':
+    {schema}
+
+    User question: "{user_question}"
+
+    Return a JSON with: table_name, select, filters (array), order (optional), limit (optional).
+    Only use columns from the schema above.
+    """
+    
+    response = client.chat.completions.create(
+        model="Qwen/Qwen3-Coder-30B-A3B-Instruct",
+        messages=[
+            {"role": "system", "content": "Output valid JSON only."},
+            {"role": "user", "content": prompt}
+        ],
+        temperature=0.1
+    )
+    
+    content = response.choices[0].message.content
+    if "```" in content:
+        content = re.search(r"```(?:json)?(.*?)```", content, re.DOTALL).group(1).strip()
+    
+    try:
+        return json.loads(content)
+    except:
+        return {"table_name": table_name, "select": "*", "filters": []}
+
 def handle_cross_table_query(user_question: str) -> str:
     """Handle complex queries that might involve multiple tables."""
     try:
-        # Get schema for all tables
-        all_schemas = ""
-        for table in AVAILABLE_TABLES:
-            schema = get_table_schema(table)
-            all_schemas += f"\n\n{schema}"
+        all_schemas = get_all_schemas(sample_rows=2)
+        relationships = get_table_relationships()
+        relationship_map = get_relationship_map()
         
-        # First, identify relevant tables and plan the query approach
-        planning_prompt = f"""
+        # Step 1: Ask LLM which tables are needed
+        table_selection_prompt = f"""
         Given these database schemas:
-        
         {all_schemas}
-        
-        The user asked: "{user_question}"
-        
-        This question requires data from multiple tables.
-        
-        1. Determine which tables are needed to fully answer this query
-        2. Explain how these tables should be linked (which columns)
-        
-        Return a JSON object with:
-        {{
-          "primary_table": "name of main table to query first",
-          "secondary_tables": ["other table names needed"],
-          "join_conditions": [
-            {{
-              "table1": "name of first table", 
-              "column1": "column in first table", 
-              "table2": "name of second table", 
-              "column2": "column in second table"
-            }}
-          ]
-        }}
-        
-        Only return the JSON without additional text.
+
+        User question: "{user_question}"
+
+        Which tables from the following list are needed to answer this question?
+        Available tables: {AVAILABLE_TABLES}
+
+        Return ONLY a JSON array of table names, e.g. ["users", "transactions"].
+        Do not include tables not in the available list.
         """
         
-        # Get the query plan
-        planning_response = client.chat.completions.create(
+        response = client.chat.completions.create(
             model="Qwen/Qwen3-Coder-30B-A3B-Instruct",
             messages=[
-                {"role": "system", "content": "You are a database query planner."},
-                {"role": "user", "content": planning_prompt}
+                {"role": "system", "content": "You output only valid JSON arrays of table names."},
+                {"role": "user", "content": table_selection_prompt}
             ],
             temperature=0.1
         )
         
-        # Parse the planning response
-        planning_content = planning_response.choices[0].message.content
-        if "```" in planning_content:
-            match = re.search(r"```(?:json)?(.*?)```", planning_content, re.DOTALL)
-            if match:
-                planning_content = match.group(1).strip()
-                
-        plan = json.loads(planning_content)
+        content = response.choices[0].message.content
+        if "```" in content:
+            content = re.search(r"```(?:json)?(.*?)```", content, re.DOTALL).group(1).strip()
         
-        # Now execute queries for each table and collect results
+        needed_tables = json.loads(content)
+        needed_tables = [t for t in needed_tables if t in AVAILABLE_TABLES]
+
+        if len(needed_tables) <= 1:
+            # Fallback to single-table query
+            query_params = generate_supabase_query(user_question)
+            result = execute_supabase_query(query_params)
+            return generate_human_response(user_question, result)
+
+        # Step 2: Build safe query plan using REAL relationships
+        primary_table = needed_tables[0]
         all_results = {}
         
-        # First query the primary table
-        primary_table = plan.get("primary_table")
-        primary_query_prompt = f"""
-        Given this database schema:
-        
-        {get_table_schema(primary_table)}
-        
-        Generate a Supabase query for the table '{primary_table}' to find information relevant to: "{user_question}"
-        
-        Return only a JSON with:
-        {{
-          "table_name": "{primary_table}",
-          "select": "columns to select or *",
-          "filters": [{{column, operator, value}}],
-          "order": "column to order by (optional)",
-          "limit": number (optional)
-        }}
-        """
-        
-        primary_response = client.chat.completions.create(
-            model="Qwen/Qwen3-Coder-30B-A3B-Instruct",
-            messages=[
-                {"role": "system", "content": "You generate database queries in JSON format only."},
-                {"role": "user", "content": primary_query_prompt}
-            ],
-            temperature=0.1
-        )
-        
-        primary_query = json.loads(primary_response.choices[0].message.content.strip())
-        primary_result = execute_supabase_query(primary_query)
+        # Query primary table
+        primary_params = generate_supabase_query_for_table(user_question, primary_table)
+        primary_result = execute_supabase_query(primary_params)
         all_results[primary_table] = primary_result.get("data", [])
         
-        # Now query each secondary table based on join conditions
-        for join in plan.get("join_conditions", []):
-            secondary_table = join.get("table2") if join.get("table1") == primary_table else join.get("table1")
-            join_column_primary = join.get("column1") if join.get("table1") == primary_table else join.get("column2")
-            join_column_secondary = join.get("column2") if join.get("table1") == primary_table else join.get("column1")
-            
-            # Get values from primary table for the join
-            join_values = [row.get(join_column_primary) for row in all_results[primary_table] if row.get(join_column_primary) is not None]
-            
-            if join_values:
-                secondary_query = {
-                    "table_name": secondary_table,
-                    "select": "*",
-                    "filters": [
-                        {
-                            "column": join_column_secondary,
-                            "operator": "in",
-                            "value": join_values
-                        }
+        # Join related tables using REAL foreign keys
+        for other_table in needed_tables[1:]:
+            joined = False
+            for (from_t, from_c), (to_t, to_c) in relationship_map.items():
+                if {from_t, to_t} == {primary_table, other_table}:
+                    if from_t == primary_table:
+                        join_col_primary = from_c
+                        join_col_other = to_c
+                    else:
+                        join_col_primary = to_c
+                        join_col_other = from_c
+
+                    join_values = [
+                        row.get(join_col_primary) 
+                        for row in all_results[primary_table] 
+                        if row.get(join_col_primary) is not None
                     ]
-                }
-                
-                secondary_result = execute_supabase_query(secondary_query)
-                all_results[secondary_table] = secondary_result.get("data", [])
-        
-        # Generate a comprehensive response using all collected data
+                    join_values = list(set(join_values))
+
+                    if join_values:
+                        other_query = {
+                            "table_name": other_table,
+                            "select": "*",
+                            "filters": [{"column": join_col_other, "operator": "in", "value": join_values}]
+                        }
+                        other_result = execute_supabase_query(other_query)
+                        all_results[other_table] = other_result.get("data", [])
+                        joined = True
+                        break
+            
+            if not joined:
+                all_results[other_table] = []
+
+        # Step 3: Generate response from real data
         response_prompt = f"""
-        The user asked: "{user_question}"
+        User asked: "{user_question}"
+        Data from tables:
+        {json.dumps(all_results, indent=2, default=str)}
 
-        I have data from multiple tables:
-
-        {json.dumps(all_results, indent=2)}
-
-        IMPORTANT: ONLY use the data provided above. Do NOT invent or hallucinate any additional transactions, users, or products.
-
-        Please provide a comprehensive answer that:
-        1. Combines all relevant information from the tables
-        2. Presents complete user details along with their transactions
-        3. Is concise and well-organized
-        4. Uses appropriate formatting (bold for important details)
-        5. DOES NOT ask if the user wants more information
-        6. Presents ONLY the information in the data above
-        7. If there are more than 10 items, indicate the total count but only show the first 10
-
-        Your response should be complete and not suggest further queries.
+        Provide a clear, factual answer using ONLY the data above.
+        Do not invent relationships or data.
+        If a table has no matching records, say so.
+        Be concise and helpful.
         """
         
-        final_response = client.chat.completions.create(
+        final_resp = client.chat.completions.create(
             model="Qwen/Qwen3-Coder-30B-A3B-Instruct",
             messages=[
-                {"role": "system", "content": "You provide complete answers by joining information from multiple database tables."},
+                {"role": "system", "content": "Answer based strictly on provided data."},
                 {"role": "user", "content": response_prompt}
             ],
             temperature=0.2
         )
-        
-        return final_response.choices[0].message.content
-            
+        return final_resp.choices[0].message.content
+
     except Exception as e:
-        return f"I ran into a problem with this multi-table query: {str(e)}. Could you try a simpler question?"
+        logging.error(f"Cross-table query error: {e}")
+        return f"Sorry, I couldn't process this multi-table request due to an internal error."
+

@@ -1,0 +1,343 @@
+{
+  "tables": {
+    "products": {
+      "columns": [
+        {
+          "column_name": "product_id",
+          "data_type": "integer"
+        },
+        {
+          "column_name": "product_name",
+          "data_type": "character varying"
+        },
+        {
+          "column_name": "listing_price",
+          "data_type": "numeric"
+        },
+        {
+          "column_name": "sale_price",
+          "data_type": "numeric"
+        },
+        {
+          "column_name": "discount",
+          "data_type": "numeric"
+        },
+        {
+          "column_name": "brand",
+          "data_type": "character varying"
+        },
+        {
+          "column_name": "description",
+          "data_type": "text"
+        },
+        {
+          "column_name": "rating",
+          "data_type": "numeric"
+        },
+        {
+          "column_name": "reviews",
+          "data_type": "integer"
+        }
+      ],
+      "sample_data": [
+        {
+          "product_id": 1,
+          "product_name": "Wireless Noise-Cancelling Headphones",
+          "listing_price": 299.99,
+          "sale_price": 249.99,
+          "discount": 16.67,
+          "brand": "AcoustiX",
+          "description": "Experience immersive audio with these comfortable, over-ear headphones. Features include active noise cancellation and a 30-hour battery life.",
+          "rating": 4.5,
+          "reviews": 1245
+        },
+        {
+          "product_id": 2,
+          "product_name": "Smartwatch with GPS",
+          "listing_price": 199.5,
+          "sale_price": 179.99,
+          "discount": 9.78,
+          "brand": "TechPulse",
+          "description": "Stay connected and track your fitness goals. This smartwatch includes a heart rate monitor, GPS, and a durable, waterproof design.",
+          "rating": 4.2,
+          "reviews": 850
+        },
+        {
+          "product_id": 3,
+          "product_name": "Portable Bluetooth Speaker",
+          "listing_price": 89.0,
+          "sale_price": 75.0,
+          "discount": 15.73,
+          "brand": "SoundWave",
+          "description": "A compact and powerful speaker perfect for outdoor adventures. It offers crystal-clear sound and up to 12 hours of playtime.",
+          "rating": 4.7,
+          "reviews": 2100
+        },
+        {
+          "product_id": 4,
+          "product_name": "Ergonomic Office Chair",
+          "listing_price": 350.0,
+          "sale_price": 299.99,
+          "discount": 14.29,
+          "brand": "ErgoFit",
+          "description": "Designed for maximum comfort and support during long workdays. Features adjustable lumbar support and a breathable mesh back.",
+          "rating": 4.8,
+          "reviews": 560
+        },
+        {
+          "product_id": 5,
+          "product_name": "4K Ultra HD Smart TV",
+          "listing_price": 899.99,
+          "sale_price": 799.0,
+          "discount": 11.22,
+          "brand": "VisionMax",
+          "description": "Bring your entertainment to life with stunning 4K resolution. This smart TV comes with built-in streaming apps and multiple HDMI ports.",
+          "rating": 4.6,
+          "reviews": 985
+        }
+      ],
+      "row_count": 120
+    },
+    "users": {
+      "columns": [
+        {
+          "column_name": "user_id",
+          "data_type": "integer"
+        },
+        {
+          "column_name": "first_name",
+          "data_type": "text"
+        },
+        {
+          "column_name": "last_name",
+          "data_type": "text"
+        },
+        {
+          "column_name": "email",
+          "data_type": "text"
+        }
+      ],
+      "sample_data": [
+        {
+          "user_id": 1,
+          "first_name": "Liam",
+          "last_name": "Smith",
+          "email": "liam.smith@example.com"
+        },
+        {
+          "user_id": 2,
+          "first_name": "Olivia",
+          "last_name": "Johnson",
+          "email": "olivia.johnson@example.com"
+        },
+        {
+          "user_id": 3,
+          "first_name": "Noah",
+          "last_name": "Williams",
+          "email": "noah.williams@example.com"
+        },
+        {
+          "user_id": 4,
+          "first_name": "Emma",
+          "last_name": "Brown",
+          "email": "emma.brown@example.com"
+        },
+        {
+          "user_id": 5,
+          "first_name": "Oliver",
+          "last_name": "Jones",
+          "email": "oliver.jones@example.com"
+        }
+      ],
+      "row_count": 20
+    },
+    "transactions": {
+      "columns": [
+        {
+          "column_name": "transaction_id",
+          "data_type": "integer"
+        },
+        {
+          "column_name": "user_id",
+          "data_type": "integer"
+        },
+        {
+          "column_name": "product_id",
+          "data_type": "integer"
+        },
+        {
+          "column_name": "quantity",
+          "data_type": "integer"
+        },
+        {
+          "column_name": "purchase_date",
+          "data_type": "timestamp without time zone"
+        },
+        {
+          "column_name": "total_price",
+          "data_type": "numeric"
+        }
+      ],
+      "sample_data": [
+        {
+          "transaction_id": 1,
+          "user_id": 1,
+          "product_id": 1,
+          "quantity": 1,
+          "purchase_date": "2025-10-01T10:30:00",
+          "total_price": 249.99
+        },
+        {
+          "transaction_id": 2,
+          "user_id": 2,
+          "product_id": 36,
+          "quantity": 1,
+          "purchase_date": "2025-10-01T11:15:00",
+          "total_price": 99.0
+        },
+        {
+          "transaction_id": 3,
+          "user_id": 3,
+          "product_id": 5,
+          "quantity": 1,
+          "purchase_date": "2025-10-01T12:45:00",
+          "total_price": 799.0
+        },
+        {
+          "transaction_id": 4,
+          "user_id": 4,
+          "product_id": 12,
+          "quantity": 1,
+          "purchase_date": "2025-10-01T13:00:00",
+          "total_price": 200.0
+        },
+        {
+          "transaction_id": 5,
+          "user_id": 5,
+          "product_id": 7,
+          "quantity": 2,
+          "purchase_date": "2025-10-01T14:20:00",
+          "total_price": 79.98
+        }
+      ],
+      "row_count": 120
+    }
+  },
+  "relationships": [],
+  "column_descriptions": [
+    {
+      "id": 1,
+      "table_name": "products",
+      "column_name": "product_id",
+      "description": "Unique identifier for each product"
+    },
+    {
+      "id": 2,
+      "table_name": "products",
+      "column_name": "product_name",
+      "description": "The name of the product"
+    },
+    {
+      "id": 3,
+      "table_name": "products",
+      "column_name": "listing_price",
+      "description": "The original listed price of the product"
+    },
+    {
+      "id": 4,
+      "table_name": "products",
+      "column_name": "sale_price",
+      "description": "The discounted sales price"
+    },
+    {
+      "id": 5,
+      "table_name": "products",
+      "column_name": "discount",
+      "description": "Discount applied (percentage or absolute)"
+    },
+    {
+      "id": 6,
+      "table_name": "products",
+      "column_name": "brand",
+      "description": "Brand of the product"
+    },
+    {
+      "id": 7,
+      "table_name": "products",
+      "column_name": "description",
+      "description": "A detailed description of the product"
+    },
+    {
+      "id": 8,
+      "table_name": "products",
+      "column_name": "rating",
+      "description": "Average rating of the product (0\u20135 scale)"
+    },
+    {
+      "id": 9,
+      "table_name": "products",
+      "column_name": "reviews",
+      "description": "Number of reviews received by the product"
+    },
+    {
+      "id": 10,
+      "table_name": "users",
+      "column_name": "user_id",
+      "description": "Unique identifier for the customer or user."
+    },
+    {
+      "id": 11,
+      "table_name": "users",
+      "column_name": "first_name",
+      "description": "The first name of the user."
+    },
+    {
+      "id": 12,
+      "table_name": "users",
+      "column_name": "last_name",
+      "description": "The last name of the user."
+    },
+    {
+      "id": 13,
+      "table_name": "users",
+      "column_name": "email",
+      "description": "The primary email address of the user (must be unique)."
+    },
+    {
+      "id": 14,
+      "table_name": "transactions",
+      "column_name": "transaction_id",
+      "description": "Unique identifier for each transaction/purchase."
+    },
+    {
+      "id": 15,
+      "table_name": "transactions",
+      "column_name": "user_id",
+      "description": "Foreign key linking the transaction to the buying user."
+    },
+    {
+      "id": 16,
+      "table_name": "transactions",
+      "column_name": "product_id",
+      "description": "Foreign key linking the transaction to the purchased product."
+    },
+    {
+      "id": 17,
+      "table_name": "transactions",
+      "column_name": "quantity",
+      "description": "The number of units of the product purchased in this transaction."
+    },
+    {
+      "id": 18,
+      "table_name": "transactions",
+      "column_name": "purchase_date",
+      "description": "The timestamp when the transaction was completed."
+    },
+    {
+      "id": 19,
+      "table_name": "transactions",
+      "column_name": "total_price",
+      "description": "The final price paid for the total quantity of the product."
+    }
+  ]
+}
